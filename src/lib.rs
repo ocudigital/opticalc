@@ -1,3 +1,4 @@
+#![doc = include_str!("../README.md")]
 mod convert_power;
 mod crossed_cylinders;
 mod oblique_meridian;
@@ -48,14 +49,18 @@ impl SpheroCyl {
 /// Base direction for horizontal prism relative to the patient.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HorizontalBase {
+    /// Base In (BI): prism base oriented toward the patient's nose.
     In,
+    /// Base Out (BO): prism base oriented toward the patient's periphery.
     Out,
 }
 
 /// Base direction for vertical prism.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VerticalBase {
+    /// Base Up (BU): prism base oriented upward.
     Up,
+    /// Base Down (BD): prism base oriented downward.
     Down,
 }
 
@@ -328,12 +333,33 @@ impl VerticalPrism {
     }
 }
 
+/// Represents combined horizontal and vertical prism components.
+///
+/// This type encapsulates both horizontal and vertical prism effects,
+/// allowing calculation of the resultant prism magnitude.
 pub struct CombinedPrism {
+    /// Horizontal prism component.
     pub horizontal: HorizontalPrism,
+    /// Vertical prism component.
     pub vertical: VerticalPrism,
 }
 
 impl CombinedPrism {
+    /// Returns the resultant prism magnitude in prism diopters.
+    ///
+    /// This computes the vector magnitude of the combined horizontal
+    /// and vertical prism components using the Pythagorean theorem.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use opticalc::*;
+    /// let prism = CombinedPrism {
+    ///     horizontal: HorizontalPrism::new(3.0, HorizontalBase::Out),
+    ///     vertical: VerticalPrism::new(4.0, VerticalBase::Up),
+    /// };
+    /// assert_eq!(prism.magnitude(), 5.0); // 3-4-5 triangle
+    /// ```
     pub fn magnitude(&self) -> f64 {
         self.horizontal.amount().hypot(self.vertical.amount())
     }
