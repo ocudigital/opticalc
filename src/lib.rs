@@ -11,6 +11,7 @@ pub use prism::*;
 
 /// Defines the eye.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Eye {
     /// Right eye.
     OD,
@@ -21,6 +22,7 @@ pub enum Eye {
 
 /// Defines a sphero-cylinder lens.
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SpheroCyl {
     /// Spherical component of the lens power (D).
     /// Example: +2.00 DS → `sphere = 2.0`.
@@ -48,30 +50,37 @@ impl SpheroCyl {
 
 /// Base direction for horizontal prism relative to the patient.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum HorizontalBase {
     /// Base In (BI): prism base oriented toward the patient's nose.
+    #[cfg_attr(feature = "serde", serde(rename = "BI"))]
     In,
     /// Base Out (BO): prism base oriented toward the patient's periphery.
+    #[cfg_attr(feature = "serde", serde(rename = "BO"))]
     Out,
 }
 
 /// Base direction for vertical prism.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum VerticalBase {
     /// Base Up (BU): prism base oriented upward.
+    #[cfg_attr(feature = "serde", serde(rename = "BU"))]
     Up,
     /// Base Down (BD): prism base oriented downward.
+    #[cfg_attr(feature = "serde", serde(rename = "BD"))]
     Down,
 }
 
 /// Represents horizontal prism in prism diopters, with an explicit base direction.
 ///
 /// In clinical optometry and ophthalmology, horizontal prism is defined by:
-/// - **Base In (BI):** base oriented toward the patient’s nose (conventionally negative in signed form).
-/// - **Base Out (BO):** base oriented toward the patient’s temple (conventionally positive in signed form).
+/// - **Base In (BI):** base oriented toward the patient's nose (conventionally negative in signed form).
+/// - **Base Out (BO):** base oriented toward the patient's temple (conventionally positive in signed form).
 ///
 /// This type keeps the `amount` always **non-negative**. The sign is derived
 /// only when calling [`signed`](HorizontalPrism::signed).
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct HorizontalPrism {
     /// Magnitude of horizontal prism, measured in prism diopters (Δ).
     ///
@@ -205,6 +214,7 @@ impl HorizontalPrism {
 ///
 /// As with [`HorizontalPrism`], the `amount` is always stored as **non-negative**.  
 /// The sign is derived only when calling [`signed`](VerticalPrism::signed).
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct VerticalPrism {
     /// Magnitude of vertical prism, measured in prism diopters (Δ).
     ///
@@ -333,6 +343,7 @@ impl VerticalPrism {
 ///
 /// This type encapsulates both horizontal and vertical prism effects,
 /// allowing calculation of the resultant prism magnitude.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CombinedPrism {
     /// Horizontal prism component.
     pub horizontal: HorizontalPrism,
@@ -363,6 +374,7 @@ impl CombinedPrism {
 
 /// Represents lens decentration relative to the optical center.
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Decentration {
     /// Vertical decentration in millimeters.
     /// - Positive = **up**.
