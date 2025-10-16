@@ -16,89 +16,8 @@
 
 use crate::*;
 
-/// Represents lens decentration relative to the optical center.
-#[derive(Debug, Clone, Copy)]
-pub struct Decentration {
-    /// Vertical decentration in millimeters.
-    /// - Positive = **up**.
-    /// - Negative = **down**.
-    /// Example: 3 mm down → `vertical_mm = -3.0`.
-    pub vertical_mm: f64,
-
-    /// Horizontal decentration in millimeters.
-    /// - Positive = **in** (nasal).
-    /// - Negative = **out** (temporal).
-    /// Example: 2 mm in → `horizontal_mm = 2.0`.
-    pub horizontal_mm: f64,
-}
-
-/// Raw induced prism vector in prism diopters (∆).
-#[derive(Debug, Clone, Copy)]
-pub struct InducedPrism {
-    /// Signed horizontal prism (∆).
-    /// Sign is intermediate; interpretation depends on eye.
-    pub horizontal_prism: f64,
-    /// Signed vertical prism (∆).
-    /// Positive/negative correspond to base-down/up before interpretation.
-    pub vertical_prism: f64,
-    /// Vector magnitude (∆).
-    pub magnitude: f64,
-}
-
-/// Prism with clinical base direction resolved for a given eye.
-#[derive(Debug, Clone, Copy)]
-pub struct ClinicalInducedPrism {
-    pub eye: Eye,
-    pub prism: InducedPrism,
-}
-
-impl ClinicalInducedPrism {
-    /// Get horizontal prism magnitude and base direction. Will return None if the prism is 0.
-    pub fn horizontal(&self) -> Option<(f64, HorizontalBase)> {
-        let value = self.prism.horizontal_prism;
-        if value == 0.0 {
-            return None;
-        }
-
-        let base = match self.eye {
-            Eye::OD => {
-                if value < 0.0 {
-                    HorizontalBase::In
-                } else {
-                    HorizontalBase::Out
-                }
-            }
-            Eye::OS => {
-                if value < 0.0 {
-                    HorizontalBase::Out
-                } else {
-                    HorizontalBase::In
-                }
-            }
-        };
-
-        Some((value.abs(), base))
-    }
-
-    /// Get vertical prism magnitude and base direction. Will return None if the prism is 0.
-    pub fn vertical(&self) -> Option<(f64, VerticalBase)> {
-        let value = self.prism.vertical_prism;
-        if value == 0.0 {
-            return None;
-        }
-
-        let base = if value < 0.0 {
-            VerticalBase::Up
-        } else {
-            VerticalBase::Down
-        };
-
-        Some((value.abs(), base))
-    }
-}
-
 /// Compute induced prism using the full sphero-cylinder power matrix,
-/// including toric cross-terms, with OD/OS handling.
+/// including toric cross-terms, with OD/OS handling, returning clinical base directions.
 ///
 /// ## Method
 /// The lens is represented as a 2×2 power matrix:
@@ -114,18 +33,15 @@ impl ClinicalInducedPrism {
 /// The induced prism vector Δ = F · c, where:
 /// - `c` is the decentration vector in cm (converted from mm),
 /// - horizontal component = `-decentration_in/10`,
-/// - vertical component   = `-decentration_up/10`.
+/// - vertical component   = `decentration_up/10`.
 ///
 /// ## Eye handling
 /// - For **OD**: positive `decentration_in` means nasal (in), negative = temporal (out).
-/// - For **OS**: nasal is opposite, so the horizontal decentration is negated.
+/// - For **OS**: nasal is opposite, so the horizontal decentration is **negated** before use.
 ///
-/// ## Output
-/// - Returns `Prism` with signed horizontal and vertical components (∆).
-/// - Positive/negative signs indicate direction; base direction labels can be
-///   derived from eye + sign convention.
-/// - `magnitude` is the Euclidean norm of the prism vector (always ≥ 0).
-pub fn induced_prism(eye: Eye, lens: SpheroCyl, dec: Decentration) -> ClinicalInducedPrism {
+/// The returned [`CombinedPrism`] uses [`HorizontalPrism`] and [`VerticalPrism`] with
+/// non-negative magnitudes and explicit base directions.
+pub fn induced_prism(eye: Eye, lens: SpheroCyl, dec: Decentration) -> CombinedPrism {
     let s: f64 = lens.sphere;
     let c = lens.cylinder;
     let axis_rad = lens.axis_deg.to_radians();
@@ -137,7 +53,7 @@ pub fn induced_prism(eye: Eye, lens: SpheroCyl, dec: Decentration) -> ClinicalIn
     let pt = -c * sin_axis * cos_axis; // toric cross-term
     let py = s + c * cos_axis * cos_axis; // power at 90° (vertical meridian)
 
-    // Map decentrations to the variables and apply the OS nasal flip
+    // Map decentrations and apply the OS nasal flip for the "in" component
     let dec_up_mm = dec.vertical_mm; // +up / −down
     let dec_in_mm = dec.horizontal_mm; // +in / −out
     let dec_in_adjusted_mm = match eye {
@@ -149,15 +65,41 @@ pub fn induced_prism(eye: Eye, lens: SpheroCyl, dec: Decentration) -> ClinicalIn
     // horizontal = (Px * -in_adj/10) + (Pt * -up/10)
     // vertical   = (-Pt * in_adj/10) + (-Py * up/10)
     let horiz_value = (px * (-dec_in_adjusted_mm) / 10.0) + (pt * (-dec_up_mm) / 10.0);
-    let vert_value = (-pt * dec_in_adjusted_mm / 10.0) + (-py * dec_up_mm / 10.0);
+    let vert_value = (pt * dec_in_adjusted_mm / 10.0) + (py * dec_up_mm / 10.0);
 
-    let prism = InducedPrism {
-        horizontal_prism: horiz_value,
-        vertical_prism: vert_value,
-        magnitude: horiz_value.hypot(vert_value),
+    // Resolve clinical base directions and non-negative magnitudes.
+
+    // Horizontal depends on eye:
+    let horizontal_base = match eye {
+        Eye::OD => {
+            if horiz_value < 0.0 {
+                HorizontalBase::In
+            } else {
+                HorizontalBase::Out
+            }
+        }
+        Eye::OS => {
+            if horiz_value < 0.0 {
+                HorizontalBase::Out
+            } else {
+                HorizontalBase::In
+            }
+        }
     };
+    let horizontal = HorizontalPrism::new(horiz_value.abs(), horizontal_base);
 
-    ClinicalInducedPrism { eye, prism }
+    // Vertical is eye-independent with BU positive, BD negative:
+    let vertical_base = if vert_value >= 0.0 {
+        VerticalBase::Up
+    } else {
+        VerticalBase::Down
+    };
+    let vertical = VerticalPrism::new(vert_value.abs(), vertical_base);
+
+    CombinedPrism {
+        horizontal,
+        vertical,
+    }
 }
 
 #[cfg(test)]
@@ -178,51 +120,22 @@ mod tests {
         };
 
         let p = induced_prism(Eye::OS, lens, dec);
-
-        assert_abs_diff_eq!(p.prism.horizontal_prism, 0.0625, epsilon = 1e-4);
-        assert_relative_eq!(p.prism.vertical_prism, -0.31825, epsilon = 1e-4);
-
-        // Optional: check clinical bases
-        let (hmag, hbase) = p
-            .horizontal()
-            .expect("expected non-zero horizontal prism");
-        let (vmag, vbase) = p
-            .vertical()
-            .expect("expected non-zero vertical prism");
-        assert_relative_eq!(hmag, 0.0625, epsilon = 1e-4);
-        assert!(matches!(hbase, HorizontalBase::In));
-        assert_relative_eq!(vmag, 0.31825, epsilon = 1e-4);
-        assert!(matches!(vbase, VerticalBase::Up));
-    }
-
-    #[test]
-    fn test_2() {
-        let lens = SpheroCyl {
-            sphere: 2.0,
-            cylinder: -1.0,
-            axis_deg: 26.0,
-        };
-        let dec = Decentration {
-            horizontal_mm: 1.0,
-            vertical_mm: 3.0,
-        };
+        assert_abs_diff_eq!(p.horizontal.signed(), -0.0625, epsilon = 1e-4);
+        assert_relative_eq!(p.vertical.signed(), 0.31825, epsilon = 1e-4);
+        assert_relative_eq!(p.horizontal.amount(), 0.0625, epsilon = 1e-4);
+        assert!(matches!(p.horizontal.base(), Some(HorizontalBase::In)));
+        assert_relative_eq!(p.vertical.amount(), 0.31825, epsilon = 1e-4);
+        assert!(matches!(p.vertical.base(), Some(VerticalBase::Up)));
 
         let p = induced_prism(Eye::OD, lens, dec);
+        assert_relative_eq!(p.vertical.signed(), 0.397, epsilon = 1e-4);
+        assert_relative_eq!(p.vertical.amount(), 0.397, epsilon = 1e-4);
+        assert!(matches!(p.vertical.base(), Some(VerticalBase::Up)));
 
-        assert_abs_diff_eq!(p.prism.horizontal_prism, -0.2989, epsilon = 1e-4);
-        assert_relative_eq!(p.prism.vertical_prism, -0.397, epsilon = 1e-4);
-
-        // Optional: check clinical bases
-        let (hmag, hbase) = p
-            .horizontal()
-            .expect("expected non-zero horizontal prism");
-        let (vmag, vbase) = p
-            .vertical()
-            .expect("expected non-zero vertical prism");
-        assert_relative_eq!(hmag, 0.2989, epsilon = 1e-4);
-        assert!(matches!(hbase, HorizontalBase::In));
-        assert_relative_eq!(vmag, 0.397, epsilon = 1e-4);
-        assert!(matches!(vbase, VerticalBase::Up));
+        assert_abs_diff_eq!(p.horizontal.signed(), -0.299, epsilon = 1e-4);
+        assert_relative_eq!(p.horizontal.amount(), 0.299, epsilon = 1e-4);
+        assert!(matches!(p.horizontal.base(), Some(HorizontalBase::In)));
+        
     }
 
     #[test]
@@ -238,18 +151,18 @@ mod tests {
         };
 
         let p = induced_prism(Eye::OD, lens, dec);
+        assert_relative_eq!(p.horizontal.amount(), 0.392434, epsilon = 1e-4);
+        assert!(matches!(p.horizontal.base(), Some(HorizontalBase::In)));
+        assert_relative_eq!(p.vertical.amount(), 1.6565, epsilon = 1e-4);
+        assert!(matches!(p.vertical.base(), Some(VerticalBase::Up)));
 
-        // Optional: check clinical bases
-        let (hmag, hbase) = p
-            .horizontal()
-            .expect("expected non-zero horizontal prism");
-        let (vmag, vbase) = p
-            .vertical()
-            .expect("expected non-zero vertical prism");
-        assert_relative_eq!(hmag, 0.392434, epsilon = 1e-4);
-        assert!(matches!(hbase, HorizontalBase::In));
-        assert_relative_eq!(vmag, 1.6565, epsilon = 1e-4);
-        assert!(matches!(vbase, VerticalBase::Up));
+        let p = induced_prism(Eye::OS, lens, dec);
+        assert_relative_eq!(p.horizontal.signed(), -0.21531, epsilon = 1e-4);
+        assert_relative_eq!(p.horizontal.amount(), 0.21531, epsilon = 1e-4);
+        assert!(matches!(p.horizontal.base(), Some(HorizontalBase::In)));
+        assert_relative_eq!(p.vertical.signed(), 1.568, epsilon = 1e-4);
+        assert_relative_eq!(p.vertical.amount(), 1.568, epsilon = 1e-4);
+        assert!(matches!(p.vertical.base(), Some(VerticalBase::Up)));
     }
 
     #[test]
@@ -266,12 +179,10 @@ mod tests {
 
         let p = induced_prism(Eye::OD, lens, dec);
 
-        assert_abs_diff_eq!(p.prism.horizontal_prism, 0.0, epsilon = 1e-4);
-        assert_relative_eq!(p.prism.vertical_prism, 0.0, epsilon = 1e-4);
-
-        // Optional: check clinical bases (should be None when zero)
-        assert!(p.horizontal().is_none());
-        assert!(p.vertical().is_none());
+        assert_abs_diff_eq!(p.horizontal.amount(), 0.0, epsilon = 1e-4);
+        assert_relative_eq!(p.vertical.amount(), 0.0, epsilon = 1e-4);
+        assert!(p.horizontal.base().is_none());
+        assert!(p.vertical.base().is_none());
     }
 
     #[test]
@@ -289,25 +200,17 @@ mod tests {
 
         // OD
         let p_od = induced_prism(Eye::OD, lens, dec);
-        assert_abs_diff_eq!(p_od.prism.horizontal_prism, -1.5, epsilon = 1e-6);
-        assert_abs_diff_eq!(p_od.prism.vertical_prism, 0.0, epsilon = 1e-6);
-        let (hmag_od, hbase_od) = p_od
-            .horizontal()
-            .expect("expected non-zero horizontal prism for OD");
-        assert_abs_diff_eq!(hmag_od, 1.5, epsilon = 1e-6);
-        // OD: negative -> base in
-        assert!(matches!(hbase_od, HorizontalBase::In));
+        assert_abs_diff_eq!(p_od.horizontal.signed(), -1.5, epsilon = 1e-6);
+        assert_abs_diff_eq!(p_od.vertical.signed(), 0.0, epsilon = 1e-6);
+        assert_abs_diff_eq!(p_od.horizontal.amount(), 1.5, epsilon = 1e-6);
+        assert!(matches!(p_od.horizontal.base(), Some(HorizontalBase::In)));
 
         // OS (nasal flip)
         let p_os = induced_prism(Eye::OS, lens, dec);
-        assert_abs_diff_eq!(p_os.prism.horizontal_prism, 1.5, epsilon = 1e-6);
-        assert_abs_diff_eq!(p_os.prism.vertical_prism, 0.0, epsilon = 1e-6);
-        let (hmag_os, hbase_os) = p_os
-            .horizontal()
-            .expect("expected non-zero horizontal prism for OS");
-        assert_abs_diff_eq!(hmag_os, 1.5, epsilon = 1e-6);
-        // OS: positive -> base in
-        assert!(matches!(hbase_os, HorizontalBase::In));
+        assert_abs_diff_eq!(p_os.horizontal.signed(), -1.5, epsilon = 1e-6);
+        assert_abs_diff_eq!(p_os.vertical.signed(), 0.0, epsilon = 1e-6);
+        assert_abs_diff_eq!(p_os.horizontal.amount(), 1.5, epsilon = 1e-6);
+        assert!(matches!(p_os.horizontal.base(), Some(HorizontalBase::In)));
     }
 
     #[test]
@@ -325,13 +228,10 @@ mod tests {
 
         let p = induced_prism(Eye::OD, lens, dec);
         // Prentice: Py = -2.00; c = 0.4 cm → vertical = -(-2)*0.4 = +0.8 ∆ (base-down)
-        assert_abs_diff_eq!(p.prism.horizontal_prism, 0.0, epsilon = 1e-6);
-        assert_abs_diff_eq!(p.prism.vertical_prism, 0.8, epsilon = 1e-6);
-        let (vmag, vbase) = p
-            .vertical()
-            .expect("expected non-zero vertical prism");
-        assert_abs_diff_eq!(vmag, 0.8, epsilon = 1e-6);
-        assert!(matches!(vbase, VerticalBase::Down));
+        assert_abs_diff_eq!(p.horizontal.signed(), 0.0, epsilon = 1e-6);
+        assert_abs_diff_eq!(p.vertical.signed(), -0.8, epsilon = 1e-6);
+        assert!(matches!(p.vertical.base(), Some(VerticalBase::Down)));
+        assert_eq!(p.horizontal.base(), None);
 
         // Axis 0° should behave the same for pure cyl wrt meridional powers
         let lens0 = SpheroCyl {
@@ -340,11 +240,7 @@ mod tests {
             axis_deg: 0.0,
         };
         let p0 = induced_prism(Eye::OD, lens0, dec);
-        assert_abs_diff_eq!(
-            p0.prism.vertical_prism,
-            p.prism.vertical_prism,
-            epsilon = 1e-6
-        );
+        assert_abs_diff_eq!(p0.vertical.signed(), p.vertical.signed(), epsilon = 1e-6);
     }
 
     #[test]
@@ -362,14 +258,9 @@ mod tests {
 
         let p = induced_prism(Eye::OD, lens, dec);
         // Px = -2.00 at 180°; c = 0.3 cm → horizontal = -Px * c = 0.6 ∆ (positive)
-        assert_abs_diff_eq!(p.prism.horizontal_prism, 0.6, epsilon = 1e-6);
-        assert_abs_diff_eq!(p.prism.vertical_prism, 0.0, epsilon = 1e-6);
-        let (hmag, hbase) = p
-            .horizontal()
-            .expect("expected non-zero horizontal prism");
-        assert_abs_diff_eq!(hmag, 0.6, epsilon = 1e-6);
-        // OD: positive -> base out
-        assert!(matches!(hbase, HorizontalBase::Out));
+        assert_abs_diff_eq!(p.horizontal.signed(), 0.6, epsilon = 1e-6);
+        assert_abs_diff_eq!(p.vertical.signed(), 0.0, epsilon = 1e-6);
+        assert!(matches!(p.horizontal.base(), Some(HorizontalBase::Out)));
     }
 
     #[test]
@@ -386,19 +277,10 @@ mod tests {
         };
 
         let p = induced_prism(Eye::OS, lens, dec);
-        assert_abs_diff_eq!(p.prism.horizontal_prism, 0.7, epsilon = 1e-6);
-        assert_abs_diff_eq!(p.prism.vertical_prism, 0.5, epsilon = 1e-6);
-        // Clinical bases
-        let (hmag, hbase) = p
-            .horizontal()
-            .expect("expected non-zero horizontal prism");
-        let (vmag, vbase) = p
-            .vertical()
-            .expect("expected non-zero vertical prism");
-        assert_abs_diff_eq!(hmag, 0.7, epsilon = 1e-6);
-        assert!(matches!(hbase, HorizontalBase::In)); // OS + → base in
-        assert_abs_diff_eq!(vmag, 0.5, epsilon = 1e-6);
-        assert!(matches!(vbase, VerticalBase::Down)); // + → base down
+        assert_abs_diff_eq!(p.horizontal.signed(), -0.7, epsilon = 1e-6);
+        assert_abs_diff_eq!(p.vertical.signed(), -0.5, epsilon = 1e-6);
+        assert!(matches!(p.horizontal.base(), Some(HorizontalBase::In)));
+        assert!(matches!(p.vertical.base(), Some(VerticalBase::Down)));
     }
 
     #[test]
@@ -415,20 +297,10 @@ mod tests {
         };
 
         let p = induced_prism(Eye::OD, lens, dec);
-        assert_abs_diff_eq!(
-            p.prism.horizontal_prism,
-            0.19485571585149866,
-            epsilon = 1e-9
-        );
-        assert_abs_diff_eq!(p.prism.vertical_prism, -0.7875, epsilon = 1e-9);
-        let (_hmag, _hbase) = p
-            .horizontal()
-            .expect("expected non-zero horizontal prism");
-        let (vmag, vbase) = p
-            .vertical()
-            .expect("expected non-zero vertical prism");
-        assert_abs_diff_eq!(vmag, 0.7875, epsilon = 1e-9);
-        assert!(matches!(vbase, VerticalBase::Up)); // negative → base up
+        assert_abs_diff_eq!(p.horizontal.signed(), 0.19485571585149866, epsilon = 1e-9);
+        assert_abs_diff_eq!(p.vertical.signed(), 0.7875, epsilon = 1e-9);
+        assert_eq!(p.horizontal.base(), Some(HorizontalBase::Out));
+        assert_eq!(p.vertical.base(), Some(VerticalBase::Up));
     }
 
     #[test]
@@ -445,10 +317,10 @@ mod tests {
         };
 
         let p = induced_prism(Eye::OD, lens, dec);
-        assert_abs_diff_eq!(p.prism.horizontal_prism, 0.5, epsilon = 1e-9);
-        assert_abs_diff_eq!(p.prism.vertical_prism, -0.5, epsilon = 1e-9);
+        assert_abs_diff_eq!(p.horizontal.signed(), 0.5, epsilon = 1e-9);
+        assert_abs_diff_eq!(p.vertical.signed(), 0.5, epsilon = 1e-9);
         // Magnitude should be sqrt(0.5^2 + 0.5^2) = ~0.70710678
-        assert_abs_diff_eq!(p.prism.magnitude, 0.7071067811865476, epsilon = 1e-12);
+        assert_abs_diff_eq!(p.magnitude(), 0.7071067811865476, epsilon = 1e-12);
     }
 
     #[test]
@@ -465,9 +337,9 @@ mod tests {
         };
 
         let p = induced_prism(Eye::OD, lens, dec);
-        assert_abs_diff_eq!(p.prism.horizontal_prism, 0.0, epsilon = 1e-12);
-        assert_abs_diff_eq!(p.prism.vertical_prism, 0.0, epsilon = 1e-12);
-        assert_abs_diff_eq!(p.prism.magnitude, 0.0, epsilon = 1e-12);
+        assert_abs_diff_eq!(p.horizontal.signed(), 0.0, epsilon = 1e-12);
+        assert_abs_diff_eq!(p.vertical.signed(), 0.0, epsilon = 1e-12);
+        assert_abs_diff_eq!(p.magnitude(), 0.0, epsilon = 1e-12);
     }
 
     #[test]
@@ -482,9 +354,9 @@ mod tests {
             vertical_mm: 0.0,
         };
         let p = induced_prism(Eye::OD, lens, dec);
-        assert_abs_diff_eq!(p.prism.horizontal_prism, 0.0, epsilon = 1e-9);
-        assert_abs_diff_eq!(p.prism.vertical_prism, 0.0, epsilon = 1e-9);
-        assert_abs_diff_eq!(p.prism.magnitude, 0.0, epsilon = 1e-9);
+        assert_abs_diff_eq!(p.horizontal.signed(), 0.0, epsilon = 1e-9);
+        assert_abs_diff_eq!(p.vertical.signed(), 0.0, epsilon = 1e-9);
+        assert_abs_diff_eq!(p.magnitude(), 0.0, epsilon = 1e-9);
     }
 
     #[test]
@@ -501,9 +373,9 @@ mod tests {
         };
         let p = induced_prism(Eye::OD, lens, dec);
         // Px = +1.00; horizontal = -Px * 1.0 cm = -1.00 ∆
-        assert_abs_diff_eq!(p.prism.horizontal_prism, -1.0, epsilon = 1e-9);
-        assert_abs_diff_eq!(p.prism.vertical_prism, 0.0, epsilon = 1e-9);
-        assert_abs_diff_eq!(p.prism.magnitude, 1.0, epsilon = 1e-9);
+        assert_abs_diff_eq!(p.horizontal.signed(), -1.0, epsilon = 1e-9);
+        assert_abs_diff_eq!(p.vertical.signed(), 0.0, epsilon = 1e-9);
+        assert_abs_diff_eq!(p.magnitude(), 1.0, epsilon = 1e-9);
     }
 
     #[test]
