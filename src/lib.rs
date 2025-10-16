@@ -145,8 +145,6 @@ impl HorizontalPrism {
 
     /// Returns the base direction, or `None` if the prism has zero magnitude.
     ///
-    /// This prevents meaningless base values for prisms of zero magnitude.
-    ///
     /// # Examples
     ///
     /// ```
@@ -278,8 +276,6 @@ impl VerticalPrism {
     }
 
     /// Returns the base direction, or `None` if the prism has zero magnitude.
-    ///
-    /// This prevents meaningless base values for prisms of zero magnitude.
     ///
     /// # Examples
     ///
