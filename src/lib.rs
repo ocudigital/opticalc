@@ -80,6 +80,7 @@ pub enum VerticalBase {
 ///
 /// This type keeps the `amount` always **non-negative**. The sign is derived
 /// only when calling [`signed`](HorizontalPrism::signed).
+#[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct HorizontalPrism {
     /// Magnitude of horizontal prism, measured in prism diopters (Δ).
@@ -214,6 +215,7 @@ impl HorizontalPrism {
 ///
 /// As with [`HorizontalPrism`], the `amount` is always stored as **non-negative**.  
 /// The sign is derived only when calling [`signed`](VerticalPrism::signed).
+#[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct VerticalPrism {
     /// Magnitude of vertical prism, measured in prism diopters (Δ).
@@ -343,6 +345,7 @@ impl VerticalPrism {
 ///
 /// This type encapsulates both horizontal and vertical prism effects,
 /// allowing calculation of the resultant prism magnitude.
+#[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CombinedPrism {
     /// Horizontal prism component.
