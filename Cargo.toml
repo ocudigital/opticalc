@@ -6,7 +6,7 @@ readme = "README.md"
 license = "MIT"
 repository = "https://github.com/ocudigital/opticalc"
 keywords = ["optometry", "ophthalmology", "optics", "clinical", "dispensing"]
-categories = ["science", "engineering", "medical"]
+categories = ["science"]
 description = "Utility functions and types for common clinical optics calculations used in optometry and ophthalmic settings."
 
 [dependencies]
