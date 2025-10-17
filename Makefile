@@ -22,6 +22,7 @@ test:
 # Build WASM package
 wasm-pack:
 	wasm-pack build --release --target bundler --features=wasm
+	cp README.npm.md pkg/README.md
 
 # Publish both packages
 publish:
