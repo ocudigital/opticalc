@@ -7,7 +7,7 @@
 //!
 //! ## Formula
 //! The minimum blank size is calculated as:
-//! ```
+//! ```text
 //! Minimum Blank Size = Effective Diameter + (Eyesize + Bridge - IPD)
 //! ```
 //!
