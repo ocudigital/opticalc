@@ -1,13 +1,17 @@
 #![doc = include_str!("../README.md")]
 mod convert_power;
 mod crossed_cylinders;
+mod minimum_blank_size;
 mod oblique_meridian;
 mod prism;
+mod transpose;
 
 pub use convert_power::*;
 pub use crossed_cylinders::*;
+pub use minimum_blank_size::*;
 pub use oblique_meridian::*;
 pub use prism::*;
+pub use transpose::*;
 
 /// Defines the eye.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
