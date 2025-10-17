@@ -5,6 +5,7 @@ mod minimum_blank_size;
 mod oblique_meridian;
 mod prism;
 mod transpose;
+mod materials;
 
 #[cfg(feature = "wasm")]
 pub mod wasm;
@@ -15,6 +16,7 @@ pub use minimum_blank_size::*;
 pub use oblique_meridian::*;
 pub use prism::*;
 pub use transpose::*;
+pub use materials::*;
 
 /// Defines the eye.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
