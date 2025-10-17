@@ -6,6 +6,9 @@ mod oblique_meridian;
 mod prism;
 mod transpose;
 
+#[cfg(feature = "wasm")]
+pub mod wasm;
+
 pub use convert_power::*;
 pub use crossed_cylinders::*;
 pub use minimum_blank_size::*;
@@ -16,6 +19,8 @@ pub use transpose::*;
 /// Defines the eye.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+#[cfg_attr(feature = "wasm", tsify(from_wasm_abi, into_wasm_abi))]
 pub enum Eye {
     /// Right eye.
     OD,
@@ -27,6 +32,8 @@ pub enum Eye {
 /// Defines a sphero-cylinder lens.
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+#[cfg_attr(feature = "wasm", tsify(from_wasm_abi, into_wasm_abi))]
 pub struct SpheroCyl {
     /// Spherical component of the lens power (D).
     /// Example: +2.00 DS → `sphere = 2.0`.
@@ -55,6 +62,8 @@ impl SpheroCyl {
 /// Base direction for horizontal prism relative to the patient.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+#[cfg_attr(feature = "wasm", tsify(from_wasm_abi, into_wasm_abi))]
 pub enum HorizontalBase {
     /// Base In (BI): prism base oriented toward the patient's nose.
     #[cfg_attr(feature = "serde", serde(rename = "BI"))]
@@ -67,6 +76,8 @@ pub enum HorizontalBase {
 /// Base direction for vertical prism.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+#[cfg_attr(feature = "wasm", tsify(from_wasm_abi, into_wasm_abi))]
 pub enum VerticalBase {
     /// Base Up (BU): prism base oriented upward.
     #[cfg_attr(feature = "serde", serde(rename = "BU"))]
@@ -86,6 +97,8 @@ pub enum VerticalBase {
 /// only when calling [`signed`](HorizontalPrism::signed).
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+#[cfg_attr(feature = "wasm", tsify(from_wasm_abi, into_wasm_abi))]
 pub struct HorizontalPrism {
     /// Magnitude of horizontal prism, measured in prism diopters (Δ).
     ///
@@ -221,6 +234,8 @@ impl HorizontalPrism {
 /// The sign is derived only when calling [`signed`](VerticalPrism::signed).
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+#[cfg_attr(feature = "wasm", tsify(from_wasm_abi, into_wasm_abi))]
 pub struct VerticalPrism {
     /// Magnitude of vertical prism, measured in prism diopters (Δ).
     ///
@@ -351,6 +366,8 @@ impl VerticalPrism {
 /// allowing calculation of the resultant prism magnitude.
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+#[cfg_attr(feature = "wasm", tsify(from_wasm_abi, into_wasm_abi))]
 pub struct CombinedPrism {
     /// Horizontal prism component.
     pub horizontal: HorizontalPrism,
@@ -382,6 +399,8 @@ impl CombinedPrism {
 /// Represents lens decentration relative to the optical center.
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+#[cfg_attr(feature = "wasm", tsify(from_wasm_abi, into_wasm_abi))]
 pub struct Decentration {
     /// Vertical decentration in millimeters.
     /// - Positive = **up**.
@@ -395,4 +414,3 @@ pub struct Decentration {
     /// Example: 2 mm in → `horizontal_mm = 2.0`.
     pub horizontal_mm: f64,
 }
-

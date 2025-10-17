@@ -9,11 +9,17 @@ keywords = ["optometry", "ophthalmology", "optics", "clinical", "dispensing"]
 categories = ["science"]
 description = "Utility functions and types for common clinical optics calculations used in optometry and ophthalmic settings."
 
+[lib]
+crate-type = ["rlib", "cdylib"]
+
 [dependencies]
 serde = { version = "1.0", optional = true, features = ["derive"] }
+tsify = { version = "0.5.6", optional = true, features = ["js"] }
+wasm-bindgen = { version = "0.2", optional = true }
 
 [features]
 serde = ["dep:serde"]
+wasm = ["dep:tsify", "dep:wasm-bindgen", "serde"]
 
 [dev-dependencies]
 approx = "0.5"
