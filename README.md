@@ -8,6 +8,8 @@ opticalc
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
 [![WebAssembly](https://img.shields.io/badge/WebAssembly-enabled-purple.svg)](https://webassembly.org)
 
+> This package is also available for JavaScript/TypeScript via npm. See the [npm README](https://github.com/ocudigital/opticalc/blob/master/README.npm.md) for usage instructions.
+
 Rust utilities for common clinical optics calculations used in optometry and ophthalmic settings.
 
 Features
