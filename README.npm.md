@@ -1,5 +1,12 @@
 # opticalc
 
+[![Crates.io](https://img.shields.io/crates/v/opticalc.svg)](https://crates.io/crates/opticalc)
+[![npm](https://img.shields.io/npm/v/opticalc.svg)](https://www.npmjs.com/package/opticalc)
+[![docs.rs](https://docs.rs/opticalc/badge.svg)](https://docs.rs/opticalc)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org)
+[![WebAssembly](https://img.shields.io/badge/WebAssembly-enabled-purple.svg)](https://webassembly.org)
+
 JavaScript/TypeScript utilities for common clinical optics calculations used in optometry and ophthalmic settings.
 
 ## Installation
