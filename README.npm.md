@@ -38,7 +38,22 @@ console.log(truePower); // -4.25
 ### TypeScript
 
 ```typescript
-import { convertPower, SpheroCyl, convertRx, simulateLensmeterReading } from 'opticalc';
+import { 
+  convertPower, 
+  SpheroCyl, 
+  convertRx, 
+  simulateLensmeterReading,
+  inducedPrism,
+  Eye,
+  Decentration,
+  crossedCylinders,
+  transpose,
+  obliqueMeridian,
+  minimumBlankSize,
+  recommendedBlankSize,
+  CR_39_INDEX,
+  POLYCARBONATE_INDEX
+} from 'opticalc';
 
 // Convert a full sphero‑cyl Rx between indices
 const measured: SpheroCyl = { 
@@ -70,13 +85,85 @@ const vSigned = prism.vertical.signed();
 const magnitude = prism.magnitude();
 ```
 
+### Crossed Cylinders
+
+```javascript
+import { crossedCylinders } from 'opticalc';
+
+// Combine two spherocylindrical lenses
+const lens1 = { sphere: -2.00, cylinder: -1.00, axisDeg: 90.0 };
+const lens2 = { sphere: -1.00, cylinder: -0.50, axisDeg: 180.0 };
+const combined = crossedCylinders(lens1, lens2);
+console.log(combined);
+```
+
+### Transposition
+
+```javascript
+import { transpose } from 'opticalc';
+
+// Transpose from minus to plus cylinder form
+const minusForm = { sphere: -3.50, cylinder: 2.00, axisDeg: 150.0 };
+const plusForm = transpose(minusForm);
+console.log(plusForm); // { sphere: -1.50, cylinder: -2.00, axisDeg: 60.0 }
+```
+
+### Oblique Meridian Power
+
+```javascript
+import { obliqueMeridian } from 'opticalc';
+
+const lens = { sphere: -2.0, cylinder: -4.0, axisDeg: 30.0 };
+const powerAt45 = obliqueMeridian(lens, 45.0);
+console.log(powerAt45);
+```
+
+### Minimum Blank Size
+
+```javascript
+import { minimumBlankSize, recommendedBlankSize } from 'opticalc';
+
+// Calculate minimum blank size for lens cutting
+const minSize = minimumBlankSize(55.0, 50.0, 15.0, 53.0);
+console.log(minSize); // 67.0
+
+// Get recommended size with working edge border
+const recommended = recommendedBlankSize(55.0, 50.0, 15.0, 53.0);
+console.log(recommended); // 69.0 (minimum + 2mm)
+```
+
+### Material Constants
+
+```javascript
+import { convertPower, CR_39_INDEX, POLYCARBONATE_INDEX } from 'opticalc';
+
+// Use predefined material indices
+const measured = -4.50;
+const truePower = convertPower(measured, CR_39_INDEX, POLYCARBONATE_INDEX);
+console.log(truePower);
+
+// Available constants:
+// CR_39_INDEX = 1.498
+// TRIVEX_INDEX = 1.532
+// CROWN_GLASS_INDEX = 1.523
+// POLYCARBONATE_INDEX = 1.586
+// HIGH_INDEX_160_INDEX = 1.600
+// HIGH_INDEX_167_INDEX = 1.670
+// HIGH_INDEX_174_INDEX = 1.740
+```
+
 ### Common.js
 
 ```javascript
-const { convertPower, convertRx } = require('opticalc');
+const { convertPower, convertRx, inducedPrism, Eye } = require('opticalc');
 
 const power = convertPower(-4.463, 1.523, 1.586);
 console.log(power);
+
+const lens = { sphere: 2.0, cylinder: -1.0, axisDeg: 25.0 };
+const decentration = { horizontalMm: 2.0, verticalMm: -1.0 };
+const prism = inducedPrism(Eye.OD, lens, decentration);
+console.log(prism.magnitude());
 ```
 
 ## API Reference

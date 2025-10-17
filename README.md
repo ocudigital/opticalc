@@ -21,6 +21,8 @@ Features
 
 ## Examples
 
+### Power Conversion
+
 ```rust
 use opticalc::*;
 
@@ -35,7 +37,7 @@ let true_rx = convert_rx(measured, 1.523, 1.586);
 let reading = simulate_lensmeter_reading(true_rx, 1.523, 1.586);
 ```
 
-Induced prism from decentration (Prentice’s rule, full toric matrix):
+### Induced Prism from Decentration
 
 ```rust
 use opticalc::*;
@@ -48,4 +50,72 @@ let p = induced_prism(Eye::OD, lens, dec);
 let h_signed = p.horizontal.signed();
 let v_signed = p.vertical.signed();
 let mag = p.magnitude();
+```
+
+### Crossed Cylinders
+
+```rust
+use opticalc::*;
+
+// Combine two spherocylindrical lenses
+let lens1 = SpheroCyl { sphere: -2.00, cylinder: -1.00, axis_deg: 90.0 };
+let lens2 = SpheroCyl { sphere: -1.00, cylinder: -0.50, axis_deg: 180.0 };
+let combined = crossed_cylinders(lens1, lens2);
+```
+
+### Transposition
+
+```rust
+use opticalc::*;
+
+// Transpose from minus to plus cylinder form
+let minus_form = SpheroCyl { sphere: -3.50, cylinder: 2.00, axis_deg: 150.0 };
+let plus_form = minus_form.transpose();
+// Result: -1.50 DS / -2.00 DC × 60
+
+// Or use the function
+let transposed = transpose(minus_form);
+```
+
+### Oblique Meridian Power
+
+```rust
+use opticalc::*;
+
+let lens = SpheroCyl { sphere: -2.0, cylinder: -4.0, axis_deg: 30.0 };
+let power_at_45 = oblique_meridian(lens, 45.0);
+let power_at_90 = lens.power_at(90.0); // Same as oblique_meridian
+```
+
+### Minimum Blank Size
+
+```rust
+use opticalc::*;
+
+// Calculate minimum blank size for lens cutting
+let min_size = minimum_blank_size(55.0, 50.0, 15.0, 53.0);
+// Result: 67.0 mm
+
+// Get recommended size with working edge border
+let recommended = recommended_blank_size(55.0, 50.0, 15.0, 53.0);
+// Result: 69.0 mm (minimum + 2mm)
+```
+
+### Material Constants
+
+```rust
+use opticalc::*;
+
+// Use predefined material indices
+let measured = -4.50;
+let true_power = convert_power(measured, CR_39_INDEX, POLYCARBONATE_INDEX);
+
+// Available constants:
+// CR_39_INDEX = 1.498
+// TRIVEX_INDEX = 1.532
+// CROWN_GLASS_INDEX = 1.523
+// POLYCARBONATE_INDEX = 1.586
+// HIGH_INDEX_160_INDEX = 1.600
+// HIGH_INDEX_167_INDEX = 1.670
+// HIGH_INDEX_174_INDEX = 1.740
 ```
