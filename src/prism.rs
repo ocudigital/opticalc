@@ -6,13 +6,15 @@
 //! - Handles both horizontal (in/out) and vertical (up/down) decentrations.
 //!
 //! ## Conventions
-//! - Lens powers are in **diopters (D)**.
-//! - Cylinder axis is in **degrees [0,180)**.
-//! - Decentrations are in **millimeters (mm)**.
-//! - **Decentration signs**:
-//!     - Horizontal (x): positive = **in** (nasal), negative = **out** (temporal).
-//!     - Vertical (y): positive = **up**, negative = **down**.
-//! - Output prism is in **prism diopters (∆)**.
+//! - Pass lens powers in **diopters (D)** and cylinder axes in **degrees from 0° through 180°**.
+//! - Pass decentration in **millimetres (mm)**. It describes where the lens's optical centre
+//!   lies relative to the point the wearer looks through.
+//! - For `horizontal_mm`, positive means the optical centre is inward (nasal); negative means
+//!   it is outward (temporal). The `eye` argument determines the physical left/right direction.
+//! - For `vertical_mm`, positive means the optical centre is above the viewing point; negative
+//!   means it is below. For example, `vertical_mm = 4.0` means the wearer looks 4 mm below the
+//!   optical centre.
+//! - The result is reported in **prism diopters (∆)** with clinical base directions.
 
 use crate::*;
 
@@ -30,10 +32,10 @@ use crate::*;
 /// - `Py = S + C·cos²(axis)` (power at 90° vertical meridian)
 /// - `Pt = −C·sin(axis)·cos(axis)` (toric cross-term)
 ///
-/// The induced prism vector Δ = F · c, where:
-/// - `c` is the decentration vector in cm (converted from mm),
-/// - horizontal component = `-decentration_in/10`,
-/// - vertical component   = `decentration_up/10`.
+/// Prentice's rule, `Δ = F · c`, multiplies lens power by decentration in centimetres.
+/// For a sphero-cylinder lens, the relevant power depends on the direction of decentration
+/// and may produce both horizontal and vertical prism. A plus lens gives base toward the
+/// optical centre; a minus lens gives base away from it.
 ///
 /// ## Eye handling
 /// - For **OD**: positive `decentration_in` means nasal (in), negative = temporal (out).
@@ -61,9 +63,10 @@ pub fn induced_prism(eye: Eye, lens: SpheroCyl, dec: Decentration) -> CombinedPr
         Eye::OS => -dec_in_mm, // nasal direction flips for OS
     };
 
-    // Use cm and a leading negative on both components in the horizontal expression:
-    // horizontal = (Px * -in_adj/10) + (Pt * -up/10)
-    // vertical   = (-Pt * in_adj/10) + (-Py * up/10)
+    // Apply Prentice's rule to the horizontal and vertical power components, converting mm to cm.
+    // The horizontal sign is mapped to base in/out for the selected eye below; vertical is positive for base up.
+    // horizontal = -(Px * in_adj/10 + Pt * up/10)
+    // vertical   =   Pt * in_adj/10 + Py * up/10
     let horiz_value = (px * (-dec_in_adjusted_mm) / 10.0) + (pt * (-dec_up_mm) / 10.0);
     let vert_value = (pt * dec_in_adjusted_mm / 10.0) + (py * dec_up_mm / 10.0);
 
@@ -215,7 +218,7 @@ mod tests {
 
     #[test]
     fn pure_cylinder_vertical_decentration_axis_0_or_180_equivalence() {
-        //  −2.00 DC × 180; 4 mm up
+        // Place the optical centre of a −2.00 DC × 180 lens 4 mm above the viewing point.
         let lens = SpheroCyl {
             sphere: 0.0,
             cylinder: -2.0,
@@ -227,13 +230,13 @@ mod tests {
         };
 
         let p = induced_prism(Eye::OD, lens, dec);
-        // Prentice: Py = -2.00; c = 0.4 cm → vertical = -(-2)*0.4 = +0.8 ∆ (base-down)
+        // Prentice's rule gives −2.00 D × 0.4 cm = −0.8Δ, or 0.8Δ base down.
         assert_abs_diff_eq!(p.horizontal.signed(), 0.0, epsilon = 1e-6);
         assert_abs_diff_eq!(p.vertical.signed(), -0.8, epsilon = 1e-6);
         assert!(matches!(p.vertical.base(), Some(VerticalBase::Down)));
         assert_eq!(p.horizontal.base(), None);
 
-        // Axis 0° should behave the same for pure cyl wrt meridional powers
+        // Axis 0° and 180° describe the same cylinder orientation and must give the same prism.
         let lens0 = SpheroCyl {
             sphere: 0.0,
             cylinder: -2.0,

@@ -68,13 +68,13 @@ let combined = crossed_cylinders(lens1, lens2);
 ```rust
 use opticalc::*;
 
-// Transpose from minus to plus cylinder form
-let minus_form = SpheroCyl { sphere: -3.50, cylinder: 2.00, axis_deg: 150.0 };
-let plus_form = minus_form.transpose();
-// Result: -1.50 DS / -2.00 DC × 60
+// Rewrite the same prescription from plus-cylinder to minus-cylinder form.
+let plus_form = SpheroCyl { sphere: -3.50, cylinder: 2.00, axis_deg: 150.0 };
+let minus_form = plus_form.transpose();
+// The equivalent prescription is -1.50 DS / -2.00 DC × 60.
 
-// Or use the function
-let transposed = transpose(minus_form);
+// The standalone function returns the same result.
+let transposed = transpose(plus_form);
 ```
 
 ### Oblique Meridian Power

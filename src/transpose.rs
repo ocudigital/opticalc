@@ -34,18 +34,18 @@ impl SpheroCyl {
     /// ```
     /// use opticalc::*;
     /// 
-    /// // Minus cylinder form: -3.50 DS / +2.00 DC × 150
-    /// let minus_form = SpheroCyl {
+    /// // Start with a prescription written in plus-cylinder form.
+    /// let plus_form = SpheroCyl {
     ///     sphere: -3.50,
     ///     cylinder: 2.00,
     ///     axis_deg: 150.0,
     /// };
-    /// 
-    /// // Transpose to plus cylinder form: -1.50 DS / -2.00 DC × 60
-    /// let plus_form = minus_form.transpose();
-    /// assert_eq!(plus_form.sphere, -1.50);
-    /// assert_eq!(plus_form.cylinder, -2.00);
-    /// assert_eq!(plus_form.axis_deg, 60.0);
+    ///
+    /// // The equivalent minus-cylinder form is -1.50 DS / -2.00 DC × 60.
+    /// let minus_form = plus_form.transpose();
+    /// assert_eq!(minus_form.sphere, -1.50);
+    /// assert_eq!(minus_form.cylinder, -2.00);
+    /// assert_eq!(minus_form.axis_deg, 60.0);
     /// ```
     pub fn transpose(self) -> Self {
         let new_sphere = self.sphere + self.cylinder;
@@ -81,18 +81,18 @@ impl SpheroCyl {
 /// ```
 /// use opticalc::*;
 /// 
-/// // Plus cylinder form: +1.00 DS / -1.50 DC × 90
-/// let plus_form = SpheroCyl {
+/// // Start with a prescription written in minus-cylinder form.
+/// let minus_form = SpheroCyl {
 ///     sphere: 1.00,
 ///     cylinder: -1.50,
 ///     axis_deg: 90.0,
 /// };
-/// 
-/// // Transpose to minus cylinder form: -0.50 DS / +1.50 DC × 180
-/// let minus_form = transpose(plus_form);
-/// assert_eq!(minus_form.sphere, -0.50);
-/// assert_eq!(minus_form.cylinder, 1.50);
-/// assert_eq!(minus_form.axis_deg, 180.0);
+///
+/// // The equivalent plus-cylinder form is -0.50 DS / +1.50 DC × 180, returned with axis 0°.
+/// let plus_form = transpose(minus_form);
+/// assert_eq!(plus_form.sphere, -0.50);
+/// assert_eq!(plus_form.cylinder, 1.50);
+/// assert_eq!(plus_form.axis_deg, 0.0);
 /// ```
 pub fn transpose(lens: SpheroCyl) -> SpheroCyl {
     lens.transpose()

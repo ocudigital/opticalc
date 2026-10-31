@@ -59,7 +59,7 @@ import {
 const measured: SpheroCyl = { 
   sphere: -2.00, 
   cylinder: -1.00, 
-  axisDeg: 180.0 
+  axis_deg: 180.0 
 };
 
 const trueRx = convertRx(measured, 1.523, 1.586);
@@ -75,7 +75,7 @@ console.log(reading);
 ```javascript
 import { inducedPrism, Eye } from 'opticalc';
 
-const lens = { sphere: 2.0, cylinder: -1.0, axisDeg: 25.0 };
+const lens = { sphere: 2.0, cylinder: -1.0, axis_deg: 25.0 };
 const decentration = { horizontalMm: 2.0, verticalMm: -1.0 };
 const prism = inducedPrism(Eye.OD, lens, decentration);
 
@@ -91,8 +91,8 @@ const magnitude = prism.magnitude();
 import { crossedCylinders } from 'opticalc';
 
 // Combine two spherocylindrical lenses
-const lens1 = { sphere: -2.00, cylinder: -1.00, axisDeg: 90.0 };
-const lens2 = { sphere: -1.00, cylinder: -0.50, axisDeg: 180.0 };
+const lens1 = { sphere: -2.00, cylinder: -1.00, axis_deg: 90.0 };
+const lens2 = { sphere: -1.00, cylinder: -0.50, axis_deg: 180.0 };
 const combined = crossedCylinders(lens1, lens2);
 console.log(combined);
 ```
@@ -102,10 +102,10 @@ console.log(combined);
 ```javascript
 import { transpose } from 'opticalc';
 
-// Transpose from minus to plus cylinder form
-const minusForm = { sphere: -3.50, cylinder: 2.00, axisDeg: 150.0 };
-const plusForm = transpose(minusForm);
-console.log(plusForm); // { sphere: -1.50, cylinder: -2.00, axisDeg: 60.0 }
+// Rewrite the same prescription from plus-cylinder to minus-cylinder form.
+const plusForm = { sphere: -3.50, cylinder: 2.00, axis_deg: 150.0 };
+const minusForm = transpose(plusForm);
+console.log(minusForm); // The equivalent prescription has sphere -1.50, cylinder -2.00, and axis 60°.
 ```
 
 ### Oblique Meridian Power
@@ -113,7 +113,7 @@ console.log(plusForm); // { sphere: -1.50, cylinder: -2.00, axisDeg: 60.0 }
 ```javascript
 import { obliqueMeridian } from 'opticalc';
 
-const lens = { sphere: -2.0, cylinder: -4.0, axisDeg: 30.0 };
+const lens = { sphere: -2.0, cylinder: -4.0, axis_deg: 30.0 };
 const powerAt45 = obliqueMeridian(lens, 45.0);
 console.log(powerAt45);
 ```
@@ -160,7 +160,7 @@ const { convertPower, convertRx, inducedPrism, Eye } = require('opticalc');
 const power = convertPower(-4.463, 1.523, 1.586);
 console.log(power);
 
-const lens = { sphere: 2.0, cylinder: -1.0, axisDeg: 25.0 };
+const lens = { sphere: 2.0, cylinder: -1.0, axis_deg: 25.0 };
 const decentration = { horizontalMm: 2.0, verticalMm: -1.0 };
 const prism = inducedPrism(Eye.OD, lens, decentration);
 console.log(prism.magnitude());

@@ -6,10 +6,15 @@
 //! that can be used while maintaining proper optical centration.
 //!
 //! ## Formula
-//! The minimum blank size is calculated as:
+//! The blank must cover the frame's effective diameter plus the total horizontal
+//! decentration needed to align the lens optical centres with the wearer's pupils:
 //! ```text
-//! Minimum Blank Size = Effective Diameter + (Eyesize + Bridge - IPD)
+//! Minimum Blank Size = Effective Diameter + |Eyesize + Bridge - IPD|
 //! ```
+//!
+//! `Eyesize + Bridge` is the frame PD. Its difference from the wearer's interpupillary
+//! distance (IPD) is the total decentration across both lenses. The absolute value is used
+//! because inward and outward decentration require the same amount of extra blank diameter.
 //!
 //! Where:
 //! - **Effective Diameter**: The effective diameter of the frame (mm)
@@ -66,7 +71,7 @@ pub fn minimum_blank_size(
     debug_assert!(bridge_mm >= 0.0, "bridge_mm must be non-negative");
     debug_assert!(ipd_mm >= 0.0, "ipd_mm must be non-negative");
 
-    effective_diameter_mm + (eyesize_mm + bridge_mm - ipd_mm)
+    effective_diameter_mm + (eyesize_mm + bridge_mm - ipd_mm).abs()
 }
 
 /// Calculate the recommended blank size including working edge border.
@@ -118,7 +123,7 @@ mod tests {
 
     #[test]
     fn minimum_blank_size_formula_verification() {
-        // Test the formula: Effective Diameter + (Eyesize + Bridge - IPD)
+        // A 66 mm frame PD and 62 mm wearer PD require 4 mm of total inward decentration.
         let effective_diameter = 60.0;
         let eyesize = 48.0;
         let bridge = 18.0;
@@ -128,7 +133,7 @@ mod tests {
         let expected = effective_diameter + (eyesize + bridge - ipd);
         
         assert_abs_diff_eq!(result, expected, epsilon = EPS);
-        assert_abs_diff_eq!(result, 64.0, epsilon = EPS); // 60 + (48 + 18 - 62) = 64
+        assert_abs_diff_eq!(result, 64.0, epsilon = EPS); // 60 mm effective diameter + 4 mm decentration.
     }
 
     #[test]
@@ -154,9 +159,16 @@ mod tests {
 
     #[test]
     fn minimum_blank_size_negative_decentration() {
-        // Case where IPD is larger than eyesize + bridge (negative decentration)
+        // A wearer PD 5 mm wider than the frame PD requires 5 mm of total outward decentration.
         let result = minimum_blank_size(55.0, 45.0, 10.0, 60.0);
-        assert_abs_diff_eq!(result, 50.0, epsilon = EPS); // 55 + (45 + 10 - 60) = 50
+        assert_abs_diff_eq!(result, 60.0, epsilon = EPS); // 55 mm effective diameter + 5 mm decentration.
+    }
+
+    #[test]
+    fn minimum_blank_size_outward_decentration_is_never_smaller_than_the_opening() {
+        // A 70 mm wearer PD and 64 mm frame PD move each lens optical centre outward by 3 mm.
+        let result = minimum_blank_size(50.0, 50.0, 14.0, 70.0);
+        assert_abs_diff_eq!(result, 56.0, epsilon = EPS); // Add 6 mm total decentration to the 50 mm opening.
     }
 
     #[test]
@@ -224,8 +236,8 @@ mod tests {
 
     #[test]
     fn minimum_blank_size_edge_case_zero_eyesize_and_bridge() {
-        // Edge case: zero eyesize and bridge
+        // A theoretical zero frame PD and 53 mm wearer PD require 53 mm of total outward decentration.
         let result = minimum_blank_size(55.0, 0.0, 0.0, 53.0);
-        assert_abs_diff_eq!(result, 2.0, epsilon = EPS); // 55 + (0 + 0 - 53) = 2
+        assert_abs_diff_eq!(result, 108.0, epsilon = EPS); // 55 mm effective diameter + 53 mm decentration.
     }
 }
